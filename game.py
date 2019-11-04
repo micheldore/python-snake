@@ -2,6 +2,7 @@ from snake import Snake
 import random
 import pygame
 import copy
+from gui import GUI
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -19,64 +20,28 @@ class Game:
         self.snakes = [Snake(self.randomLocation()) for _ in range(amount_snakes)]
         self.food = self.randomFood()
 
-    def start(self,gui=True):
-        def drawPixel(location, color):
-            x,y=location
-            pygame.draw.rect(screen, color, pygame.Rect(x*scaling_factor, y*scaling_factor, scaling_factor, scaling_factor))
-
-        def drawFood():
-            drawPixel(self.food, GREEN)
-
-        def drawSnake(s):
-            drawPixel(s.body[0], RED)
-            for loc in s.body[1:]:
-                drawPixel(loc, WHITE)
-
-        if gui:
-            pygame.init()
-            size = (self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
-            screen = pygame.display.set_mode(size)
-            pygame.display.set_mode((self.SCREEN_WIDTH*scaling_factor, self.SCREEN_HEIGHT*scaling_factor))
-            pygame.display.set_caption("Snake")
-            screen.fill(BLACK)
-            clock = pygame.time.Clock()
-
+    def start(self,gui_on=True):
+        gui = GUI(self.SCREEN_WIDTH, self.SCREEN_HEIGHT, scaling_factor, gui_on)
         done = False
         while not done:
-            snakesToDelete = []
-            for snake in self.snakes:
-                if not snake.death and self.snakeCollision(snake):
-                    snakesToDelete.append(snake)
-                    for snake in snakesToDelete:
-                        snake.body  = []
-                        snake.death = True
+            done = gui.iteration(self)
+            self.deleteSnakes()
+            self.eatOrMove()
+        pygame.quit()
 
-            if gui:
-                screen.fill(BLACK)
-                [drawSnake(snake) for snake in self.snakes if not snake.death]
-                drawFood()
-                if event.type == pygame.QUIT:
-                    done = True
-                for event in pygame.event.get():
-                    keys = pygame.key.get_pressed()
+    def eatOrMove(self):
+        eating = False
+        for snake in self.snakes:
+            if not snake.death:
+                eating = self.foodCollision(snake)
+                snake.move(eating)
+        if eating: self.food = self.randomFood()
 
-            if all([snake.death for snake in self.snakes]):
-                done = True
-
-            eating = False
-            for snake in self.snakes:
-                if not snake.death:
-                    eating = self.foodCollision(snake)
-                    snake.move(eating)
-
-            if eating: self.food = self.randomFood()
-
-            if gui:
-                pygame.display.flip()
-                clock.tick(30)
-
-        if gui:
-            pygame.quit()
+    def deleteSnakes(self):
+        for snake in self.snakes:
+            if not snake.death and self.snakeCollision(snake):
+                snake.body  = []
+                snake.death = True
 
     def randomLocation(self):
         (x,y) = (random.randint(0,self.SCREEN_WIDTH - 1),random.randint(0 + 4,self.SCREEN_HEIGHT))
@@ -109,4 +74,4 @@ class Game:
     def foodCollision(self, snake):
         return not snake.death and self.checkCollision(snake.body[0], self.food)
 
-Game(40,40).start(gui=False)
+Game(40,40).start(True)
